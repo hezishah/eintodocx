@@ -40,6 +40,14 @@ def parseEin(file):
                                 pass
                             elif c == '▄': #Half Line break
                                 pass
+                            elif c == '┘': #Center Align
+                                pass
+                            elif c == '┌': #Left Aling
+                                pass
+                            elif c == '\x18': #UpperLine
+                                pass
+                            elif c == '\x19': #UnderLine
+                                pass
                             else:
                                 normalText += c
                         if normalText!='':
@@ -57,8 +65,8 @@ def saveDocx(parsedList, file):
     document = Document()
 
     #document.add_heading('Document Title', 0)
-    p = document.add_paragraph('')
     for e in parsedList:
+        p = document.add_paragraph('')
         for k in e:
             if k == 'normal':
                 p.add_run(e[k])
