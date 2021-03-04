@@ -29,24 +29,50 @@ def parseEin(file):
                             break
                     for line in lines[lineIndex:]:
                         normalText = ""
-                        for c in line:
-                            if c == '╩': #Underline - Bold
+                        dotCommandActive = line.startswith('.')
+                        if dotCommandActive:
+                            skipCount = 2
+                            dotCommand = line[1]
+                            if dotCommand.lower() == 'p': #pagebreak
                                 pass
-                            elif c == '╦': #Underline
+                            elif dotCommand.lower() == 'a': #add lines
+                                skipCount+=1
+                                pass
+                            elif dotCommand.lower() == 'h': #header
+                                pass
+                            elif dotCommand.lower() == 'f': #footer
+                                pass
+                            else:
+                                return #Unknown
+                            line = line[skipCount:]
+                        for c in line:
+                            if c == '╩': #Underline
+                                pass
+                            elif c == '╦': #Underline Bold
                                 pass
                             elif c == '╔': #Bold
                                 pass
-                            elif c == '█': #Line Break
+                            elif c == '█': #Printer Command
                                 pass
-                            elif c == '▄': #Half Line break
+                            elif c == '▄': #Printer Command 2
                                 pass
                             elif c == '┘': #Center Align
                                 pass
                             elif c == '┌': #Left Aling
                                 pass
-                            elif c == '\x18': #UpperLine
+                            elif c == '\x18': #UpperMark
                                 pass
-                            elif c == '\x19': #UnderLine
+                            elif c == '\x19': #LowerMark
+                                pass
+                            elif c == '\x20': #Page Break
+                                pass
+                            elif c == '\x21': #Add Lines
+                                pass
+                            elif c == '\x22': #Header
+                                pass
+                            elif c == '\x23': #Footer
+                                pass
+                            elif c == '\x24': #Page Number
                                 pass
                             else:
                                 normalText += c
