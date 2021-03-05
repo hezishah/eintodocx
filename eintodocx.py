@@ -73,10 +73,10 @@ def parseEin(file):
                             elif c == '\x19': #LowerMark
                                 pass
                             else:
-                                if False: #c=='.' or c==',': #TODO: seperate dots and commas
+                                if c=='.' or c==',' or c=='[' or c==']':
                                     if lastRun['text']!='':
                                         parsedLine.append(lastRun)
-                                    lastRun = {'text':'\u202B'+c, 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                    lastRun = {'text':c, 'bold':False,'underline':False, 'centered':False, 'left':False}
                                     parsedLine.append(lastRun)
                                     lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
                                     sequenceLen = 0
