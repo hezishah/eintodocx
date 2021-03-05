@@ -1,6 +1,9 @@
 from docx import Document
 from docx.shared import Inches
-
+from docx.shared import Pt
+from docx.enum.style import WD_STYLE_TYPE
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.oxml.shared import OxmlElement, qn
 import glob
 import sys
 import os
@@ -28,6 +31,7 @@ def parseEin(file):
                         else:
                             break
                     for line in lines[lineIndex:]:
+                        parsedLine = []
                         normalText = ""
                         dotCommandActive = line.startswith('.')
                         if dotCommandActive:
@@ -64,20 +68,12 @@ def parseEin(file):
                                 pass
                             elif c == '\x19': #LowerMark
                                 pass
-                            elif c == '\x20': #Page Break
-                                pass
-                            elif c == '\x21': #Add Lines
-                                pass
-                            elif c == '\x22': #Header
-                                pass
-                            elif c == '\x23': #Footer
-                                pass
-                            elif c == '\x24': #Page Number
-                                pass
+                            
                             else:
                                 normalText += c
                         if normalText!='':
-                            parsedList.append({"normal":normalText})
+                            parsedLine.append({"normal":normalText})
+                        parsedList.append(parsedLine)
                     saveDocx(parsedList, file)
                     return
                 except Exception as e:
@@ -93,9 +89,36 @@ def saveDocx(parsedList, file):
     #document.add_heading('Document Title', 0)
     for e in parsedList:
         p = document.add_paragraph('')
-        for k in e:
-            if k == 'normal':
-                p.add_run(e[k])
+        ppr = p._element.get_or_add_pPr()
+
+        w_nsmap = '{'+ppr.nsmap['w']+'}'
+        bidi = None
+        jc = None
+        for element in ppr:
+            if element.tag == w_nsmap + 'bidi':
+                bidi = element
+            if element.tag == w_nsmap + 'jc':
+                jc = element
+        if bidi is None:
+            bidi = OxmlElement('w:bidi')
+        if jc is None:
+            jc = OxmlElement('w:jc')
+        bidi.set(qn('w:val'),'1')
+        jc.set(qn('w:val'),'both')
+        ppr.append(bidi)
+        ppr.append(jc)
+        #p.style.font.rtl = True
+        for run in e:
+            for k in run:
+                if k == 'normal':
+                    r = p.add_run(run[k])
+                    #r.bold = True
+                    #r.style = style
+                    r.font.name = 'Courier New'
+                    r.font.size = Pt(8)
+                    #r.element.bidi = True
+                    pass
+
     '''
     p = document.add_paragraph('A plain paragraph having some ')
     p.add_run('bold').bold = True
