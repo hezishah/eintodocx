@@ -50,7 +50,8 @@ def parseEin(file):
                             else:
                                 return #Unknown
                             line = line[skipCount:]
-                        lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                        lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                        sequenceLen = 0
                         for c in line:
                             if c == '╩': #Underline
                                 lastRun['underline'] = True
@@ -72,10 +73,25 @@ def parseEin(file):
                             elif c == '\x19': #LowerMark
                                 pass
                             else:
-                                lastRun['text'] += c
+                                if False: #c=='.' or c==',': #TODO: seperate dots and commas
+                                    if lastRun['text']!='':
+                                        parsedLine.append(lastRun)
+                                    lastRun = {'text':'\u202B'+c, 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                    parsedLine.append(lastRun)
+                                    lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                    sequenceLen = 0
+                                elif False: #c==' ':
+                                    if sequenceLen:
+                                        parsedLine.append(lastRun)
+                                        lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                        sequenceLen = 0
+                                    lastRun['text'] += ' '
+                                else:
+                                    sequenceLen += 1
+                                    lastRun['text'] += c
                             
                         if lastRun['text']!='':
-                            parsedLine.append(lastRun)
+                            parsedLine.append(lastRun)    
                         parsedList.append(parsedLine)
                     saveDocx(parsedList, file)
                     return
@@ -88,7 +104,9 @@ def parseEin(file):
 
 def saveDocx(parsedList, file):
     document = Document()
-
+    normalStype = document.styles['Normal']
+    normalStype.font.name = 'Courier New'
+    normalStype.font.size = Pt(10)
     #document.add_heading('Document Title', 0)
     for e in parsedList:
         p = document.add_paragraph('')
@@ -97,30 +115,45 @@ def saveDocx(parsedList, file):
         w_nsmap = '{'+ppr.nsmap['w']+'}'
         bidi = None
         jc = None
+        cs = None
+        rtl = None
         for element in ppr:
             if element.tag == w_nsmap + 'bidi':
                 bidi = element
             if element.tag == w_nsmap + 'jc':
                 jc = element
+            if element.tag == w_nsmap + 'cs':
+                cs = element
+            if element.tag == w_nsmap + 'rtl':
+                rtl = element
         if bidi is None:
             bidi = OxmlElement('w:bidi')
         if jc is None:
             jc = OxmlElement('w:jc')
+        if cs is None:
+            cs = OxmlElement('w:cs')
+        if rtl is None:
+            rtl = OxmlElement('w:rtl')
         bidi.set(qn('w:val'),'1')
         jc.set(qn('w:val'),'both')
+        cs.set(qn('w:cs'),'1')
+        rtl.set(qn('w:rtl'),'1')
         ppr.append(bidi)
         ppr.append(jc)
+        ppr.append(rtl)
         #p.style.font.rtl = True
         for run in e:
             r = p.add_run(run['text'])
             r.bold = run['bold']
+            r.cs_bold = run['bold']
             r.underline = run['underline']
             if run['centered']:
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             if run['left']:
                 p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             r.font.name = 'Courier New'
-            r.font.size = Pt(8)
+            r.font.size = Pt(10)
+            #r.font.complex_script = True
 
     '''
     p = document.add_paragraph('A plain paragraph having some ')
