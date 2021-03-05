@@ -1,9 +1,9 @@
 from docx import Document
 from docx.shared import Inches
-from docx.shared import Pt
+from docx.shared import Pt,Cm
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml.shared import OxmlElement, qn
 import glob
 import sys
@@ -31,6 +31,8 @@ def parseEin(file):
                             header.append(line)
                         else:
                             break
+                    headerParams = header[0].split(',')
+                    headerDict = {'pageTop':headerParams[1],'pageBottom':headerParams[2],'pageSize':headerParams[3],'pageLeft':headerParams[6], 'pageRight':headerParams[7]}
                     for line in lines[lineIndex:]:
                         parsedLine = []
                         normalText = ""
@@ -73,20 +75,23 @@ def parseEin(file):
                             elif c == '\x19': #LowerMark
                                 pass
                             else:
-                                if c=='.' or c==',' or c=='[' or c==']':
+                                if c=='.' or c==',' or c=='[' or c==']' or c=='(' or c==')':
                                     if lastRun['text']!='':
                                         parsedLine.append(lastRun)
                                     lastRun = {'text':c, 'bold':False,'underline':False, 'centered':False, 'left':False}
                                     parsedLine.append(lastRun)
                                     lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
                                     sequenceLen = 0
-                                elif False: #c==' ':
+                                elif c==' ':
                                     if sequenceLen:
                                         parsedLine.append(lastRun)
-                                        lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                        lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
                                         sequenceLen = 0
                                     lastRun['text'] += ' '
                                 else:
+                                    if lastRun['text']!='' and not sequenceLen:
+                                        parsedLine.append(lastRun)
+                                        lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
                                     sequenceLen += 1
                                     lastRun['text'] += c
                             
@@ -104,6 +109,10 @@ def parseEin(file):
 
 def saveDocx(parsedList, file):
     document = Document()
+    document.sections[-1].left_margin = Pt(64)
+    document.sections[-1].right_margin = Pt(64)
+    document.sections[-1].top_margin = Cm(1.4)
+    document.sections[-1].bottom_margin = Cm(1.4)
     normalStype = document.styles['Normal']
     normalStype.font.name = 'Courier New'
     normalStype.font.size = Pt(10)
@@ -112,7 +121,8 @@ def saveDocx(parsedList, file):
         p = document.add_paragraph('')
         p.paragraph_format.space_before = 0
         p.paragraph_format.space_after = 0
-        p.paragraph_format.line_spacing = 1
+        p.paragraph_format.line_spacing = Pt(11)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
         ppr = p._element.get_or_add_pPr()
 
         w_nsmap = '{'+ppr.nsmap['w']+'}'
