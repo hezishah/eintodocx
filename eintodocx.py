@@ -3,6 +3,7 @@ from docx.shared import Inches
 from docx.shared import Pt
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.shared import OxmlElement, qn
 import glob
 import sys
@@ -49,30 +50,32 @@ def parseEin(file):
                             else:
                                 return #Unknown
                             line = line[skipCount:]
+                        lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
                         for c in line:
                             if c == '╩': #Underline
-                                pass
+                                lastRun['underline'] = True
                             elif c == '╦': #Underline Bold
-                                pass
+                                lastRun['underline'] = True
+                                lastRun['bold'] = True
                             elif c == '╔': #Bold
-                                pass
+                                lastRun['bold'] = True
                             elif c == '█': #Printer Command
                                 pass
                             elif c == '▄': #Printer Command 2
                                 pass
                             elif c == '┘': #Center Align
-                                pass
+                                lastRun['centered'] = True
                             elif c == '┌': #Left Aling
-                                pass
+                                lastRun['left'] = True
                             elif c == '\x18': #UpperMark
                                 pass
                             elif c == '\x19': #LowerMark
                                 pass
-                            
                             else:
-                                normalText += c
-                        if normalText!='':
-                            parsedLine.append({"normal":normalText})
+                                lastRun['text'] += c
+                            
+                        if lastRun['text']!='':
+                            parsedLine.append(lastRun)
                         parsedList.append(parsedLine)
                     saveDocx(parsedList, file)
                     return
@@ -109,15 +112,15 @@ def saveDocx(parsedList, file):
         ppr.append(jc)
         #p.style.font.rtl = True
         for run in e:
-            for k in run:
-                if k == 'normal':
-                    r = p.add_run(run[k])
-                    #r.bold = True
-                    #r.style = style
-                    r.font.name = 'Courier New'
-                    r.font.size = Pt(8)
-                    #r.element.bidi = True
-                    pass
+            r = p.add_run(run['text'])
+            r.bold = run['bold']
+            r.underline = run['underline']
+            if run['centered']:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            if run['left']:
+                p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            r.font.name = 'Courier New'
+            r.font.size = Pt(8)
 
     '''
     p = document.add_paragraph('A plain paragraph having some ')
