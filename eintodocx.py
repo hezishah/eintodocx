@@ -110,6 +110,9 @@ def saveDocx(parsedList, file):
     #document.add_heading('Document Title', 0)
     for e in parsedList:
         p = document.add_paragraph('')
+        p.paragraph_format.space_before = 0
+        p.paragraph_format.space_after = 0
+        p.paragraph_format.line_spacing = 1
         ppr = p._element.get_or_add_pPr()
 
         w_nsmap = '{'+ppr.nsmap['w']+'}'
