@@ -75,7 +75,7 @@ def parseEin(file):
                             elif c == '\x19': #LowerMark
                                 pass
                             else:
-                                if c=='.' or c==',' or c=='[' or c==']' or c=='(' or c==')':
+                                if False: #c=='.' or c==',' or c=='[' or c==']' or c=='(' or c==')':
                                     if lastRun['text']!='':
                                         parsedLine.append(lastRun)
                                     lastRun = {'text':c, 'bold':False,'underline':False, 'centered':False, 'left':False}
