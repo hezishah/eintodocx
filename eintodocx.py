@@ -8,6 +8,7 @@ from docx.oxml.shared import OxmlElement, qn
 import glob
 import sys
 import os
+import re
 
 PAR_STATE_ERROR = 0
 PAR_STATE_NORMAL = 1
@@ -50,52 +51,75 @@ def parseEin(file):
                             elif dotCommand.lower() == 'f': #footer
                                 pass
                             else:
-                                return #Unknown
+                                skipCount = 0
                             line = line[skipCount:]
-                        lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                        lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                        re_S = re.compile(r'(  +)')
+                        sline = re_S.split(line)
                         sequenceLen = 0
-                        for c in line:
-                            if c == '╩': #Underline
-                                lastRun['underline'] = True
-                            elif c == '╦': #Underline Bold
-                                lastRun['underline'] = True
-                                lastRun['bold'] = True
-                            elif c == '╔': #Bold
-                                lastRun['bold'] = True
-                            elif c == '█': #Printer Command
-                                pass
-                            elif c == '▄': #Printer Command 2
-                                pass
-                            elif c == '┘': #Center Align
-                                lastRun['centered'] = True
-                            elif c == '┌': #Left Aling
-                                lastRun['left'] = True
-                            elif c == '\x18': #UpperMark
-                                pass
-                            elif c == '\x19': #LowerMark
-                                pass
-                            else:
-                                if False: #c=='.' or c==',' or c=='[' or c==']' or c=='(' or c==')':
-                                    if lastRun['text']!='':
-                                        parsedLine.append(lastRun)
-                                    lastRun = {'text':c, 'bold':False,'underline':False, 'centered':False, 'left':False}
-                                    parsedLine.append(lastRun)
-                                    lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
-                                    sequenceLen = 0
-                                elif c==' ':
-                                    if sequenceLen:
+                        lastControlCharacter = False
+                        for ll in sline:
+                            lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                            for c in ll:
+                                controlCharacter = True
+                                if c == '╩': #Bold
+                                    if not lastRun['underline'] and lastRun['text']!='':
+                                            parsedLine.append(lastRun)
+                                            lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                    lastRun['bold'] = True
+                                elif c == '╦': #Underline bold
+                                    if (not lastRun['underline'] and not lastRun['bold']) and lastRun['text']!='':
+                                            parsedLine.append(lastRun)
+                                            lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                    lastRun['bold'] = True
+                                    lastRun['underline'] = True
+                                elif c == '╔': #Underline
+                                    if not lastRun['underline'] and lastRun['text']!='':
+                                            parsedLine.append(lastRun)
+                                            lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                    lastRun['underline'] = True
+                                elif c == '█': #Printer Command
+                                    pass
+                                elif c == '▄': #Printer Command 2
+                                    pass
+                                elif c == '┘': #Center Align
+                                    lastRun['centered'] = True
+                                elif c == '┌': #Left Aling
+                                    lastRun['left'] = True
+                                elif c == '\x18': #UpperMark
+                                    pass
+                                elif c == '\x19': #LowerMark
+                                    pass
+                                else:
+                                    controlCharacter = False
+                                    if False: #c=='.' or c==',' or c=='[' or c==']' or c=='(' or c==')':
+                                        if lastRun['text']!='':
+                                            parsedLine.append(lastRun)
+                                        lastRun = {'text':c, 'bold':False,'underline':False, 'centered':False, 'left':False}
                                         parsedLine.append(lastRun)
                                         lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
                                         sequenceLen = 0
-                                    lastRun['text'] += ' '
-                                else:
-                                    if lastRun['text']!='' and not sequenceLen:
-                                        parsedLine.append(lastRun)
-                                        lastRun = {'text':'\u202B', 'bold':False,'underline':False, 'centered':False, 'left':False}
-                                    sequenceLen += 1
-                                    lastRun['text'] += c
-                            
-                        if lastRun['text']!='':
+                                    elif False: #c==' ':
+                                        if sequenceLen:
+                                            parsedLine.append(lastRun)
+                                            lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                            sequenceLen = 0
+                                        lastRun['text'] += ' '
+                                    else:
+                                        '''
+                                        if lastRun['text']!='' and not sequenceLen:
+                                            parsedLine.append(lastRun)
+                                            lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                        sequenceLen += 1
+                                        '''
+                                        if not lastControlCharacter:
+                                            if lastRun['bold'] or lastRun['underline']:
+                                                if lastRun['text'].strip()!='':
+                                                    parsedLine.append(lastRun) 
+                                                    lastRun = {'text':'', 'bold':False,'underline':False, 'centered':False, 'left':False}
+                                        lastRun['text'] += c
+                                        
+                                lastControlCharacter = controlCharacter
                             parsedLine.append(lastRun)    
                         parsedList.append(parsedLine)
                     saveDocx(parsedList, file)
@@ -103,8 +127,8 @@ def parseEin(file):
                 except Exception as e:
                     print(e)
                     return
-    except:
-        pass
+    except Exception as e:
+        print(e)
     return
 
 def saveDocx(parsedList, file):
@@ -117,57 +141,62 @@ def saveDocx(parsedList, file):
     normalStype.font.name = 'Courier New'
     normalStype.font.size = Pt(10)
     #document.add_heading('Document Title', 0)
+    lineIndex = 0
     for e in parsedList:
+        lineIndex += 1
         p = document.add_paragraph('')
+        p.style = normalStype
         p.paragraph_format.space_before = 0
         p.paragraph_format.space_after = 0
         p.paragraph_format.line_spacing = Pt(11)
         p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
         ppr = p._element.get_or_add_pPr()
-
+            
         w_nsmap = '{'+ppr.nsmap['w']+'}'
         bidi = None
         jc = None
         cs = None
-        rtl = None
         for element in ppr:
             if element.tag == w_nsmap + 'bidi':
                 bidi = element
-            if element.tag == w_nsmap + 'jc':
-                jc = element
-            if element.tag == w_nsmap + 'cs':
-                cs = element
-            if element.tag == w_nsmap + 'rtl':
-                rtl = element
         if bidi is None:
             bidi = OxmlElement('w:bidi')
-        if jc is None:
-            jc = OxmlElement('w:jc')
-        if cs is None:
-            cs = OxmlElement('w:cs')
-        if rtl is None:
-            rtl = OxmlElement('w:rtl')
-        bidi.set(qn('w:val'),'1')
-        jc.set(qn('w:val'),'both')
-        cs.set(qn('w:cs'),'1')
-        rtl.set(qn('w:rtl'),'1')
+        bidi.set(qn('w:val'),'he-IL')
         ppr.append(bidi)
-        ppr.append(jc)
-        ppr.append(rtl)
-        #p.style.font.rtl = True
         for run in e:
-            r = p.add_run(run['text'])
-            r.bold = run['bold']
-            r.cs_bold = run['bold']
-            r.underline = run['underline']
-            if run['centered']:
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            if run['left']:
-                p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            r.font.name = 'Courier New'
-            r.font.size = Pt(10)
-            #r.font.complex_script = True
-
+            runText = run['text']
+            if runText.startswith('-') and runText.endswith('-') and runText[1:-1].isnumeric():
+                footer = document.sections[-1].footer
+                footer.is_linked_to_previous = False
+                fp = footer.paragraphs[0]
+                fp.add_run(runText)
+                fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                document.add_section()
+            else:
+                runText = runText + '\u200F'    
+                r = p.add_run(runText)
+                if lineIndex > 60 and len(document.sections)<2:
+                    document.add_section()
+                r.cs_size = Pt(10)
+                r.cs_bold = run['bold']
+                r.bold = run['bold']
+                r.underline = run['underline']
+                if run['centered']:
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                if run['left']:
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                ppr = r._element.get_or_add_rPr()
+                    
+                w_nsmap = '{'+ppr.nsmap['w']+'}'
+                bidi = None
+                for element in ppr:
+                    if element.tag == w_nsmap + 'bidi':
+                        bidi = element
+                if bidi is None:
+                    bidi = OxmlElement('w:bidi')
+                bidi.set(qn('w:val'),'he-IL')
+                ppr.append(bidi)
+                
     '''
     p = document.add_paragraph('A plain paragraph having some ')
     p.add_run('bold').bold = True
